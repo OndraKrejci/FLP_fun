@@ -4,13 +4,15 @@ import qualified Data.Set as Set
 import qualified Data.List as List
 import qualified Data.Text as Text
 
-import Grammar
+import Grammar (CFG(CFG), Rule(Rule))
+import Algorithm (removeSimpleRules)
 
 main :: IO ()
 main = do
-  contents <- IO.readFile "cfg-pr4_14.txt"
+  contents <- IO.readFile "test/cfg-pr4_14.txt"
   let grammar = parseGrammar (lines contents)
   print grammar
+  print (removeSimpleRules grammar)
   return ()
 
 parseGrammar :: [String] -> CFG
