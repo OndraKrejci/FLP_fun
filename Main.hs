@@ -14,14 +14,14 @@ main = do
   return ()
 
 parseGrammar :: [String] -> CFG
-parseGrammar lines
-  | length lines < 4 = error "Grammar definition shorter than 4 lines"
+parseGrammar ls
+  | length ls < 4 = error "Grammar definition shorter than 4 lines"
   | otherwise =
     let
-      nonterms = parseNonterms (head lines)
-      terms = parseTerms (lines!!1)
-      rules = parseRules (drop 3 lines) nonterms terms
-      start = parseStartSymbol (lines!!2) nonterms
+      nonterms = parseNonterms (head ls)
+      terms = parseTerms (ls!!1)
+      rules = parseRules (drop 3 ls) nonterms terms
+      start = parseStartSymbol (ls!!2) nonterms
     in CFG nonterms terms rules start
 
 parseNonterms :: String -> Set.Set String
@@ -54,8 +54,8 @@ parseStartSymbol start nonterms =
     else error ("Start symbol [" ++ start ++ "] is not a nonterminal symbol")
 
 parseRules :: [String] -> Set.Set String -> Set.Set String -> Set.Set Rule
-parseRules lines nonterms terms =
-  foldr (\line acc -> Set.insert (parseRule line nonterms terms) acc) Set.empty lines
+parseRules ls nonterms terms =
+  foldr (\line acc -> Set.insert (parseRule line nonterms terms) acc) Set.empty ls
 
 parseRule :: String -> Set.Set String -> Set.Set String -> Rule
 parseRule line nonterms terms =

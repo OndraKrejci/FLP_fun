@@ -5,15 +5,15 @@ import qualified Data.Set as Set
 import qualified Data.List as List
 
 data Rule = Rule {
-    left :: String,
-    right :: [String]
+    _left :: String,
+    _right :: [String]
 } deriving (Eq, Ord)
 
 data CFG = CFG {
-    nonterms :: Set.Set String,
-    terms :: Set.Set String,
-    rules :: Set.Set Rule,
-    start :: String
+    _nonterms :: Set.Set String,
+    _terms :: Set.Set String,
+    _rules :: Set.Set Rule,
+    _start :: String
 } deriving Eq
 
 instance Show Rule where
