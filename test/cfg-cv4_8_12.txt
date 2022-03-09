@@ -1,0 +1,12 @@
+S T L
+a b + - * / [ ]
+S
+S->T+S
+S->T-S
+S->T
+T->L*T
+T->L/T
+T->L
+L->[S]
+L->a
+L->b

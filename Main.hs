@@ -5,14 +5,16 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 
 import Grammar (CFG(CFG), Rule(Rule))
-import Algorithm (removeSimpleRules)
+import Algorithm (removeSimpleRules, createCNF)
 
 main :: IO ()
 main = do
-  contents <- IO.readFile "test/cfg-pr4_14.txt"
+  contents <- IO.readFile "test/cfg-cv4_8_12.txt"
+  -- contents <- IO.readFile "test/cfg-pr4_17.txt"
   let grammar = parseGrammar (lines contents)
-  print grammar
-  print (removeSimpleRules grammar)
+  --print grammar
+  --putStrLn ""
+  print (createCNF (removeSimpleRules grammar))
   return ()
 
 parseGrammar :: [String] -> CFG
@@ -42,7 +44,7 @@ parseTerms line =
   let
     symbols = words line
     -- validTerms = Set.fromList (map (:[]) ['a'..'z']) -- TODO
-    validTerms = Set.union (Set.fromList (map (:[]) ['a'..'z'])) (Set.fromList ["+", "-", "*", "/", "(", ")"])
+    validTerms = Set.union (Set.fromList (map (:[]) ['a'..'z'])) (Set.fromList ["+", "-", "*", "/", "(", ")", "[", "]"])
     fn symbol acc =
       if Set.member symbol validTerms
         then Set.insert symbol acc
