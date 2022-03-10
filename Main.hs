@@ -1,21 +1,34 @@
 
 import qualified System.IO as IO
+import qualified System.Environment as Environment
 import qualified Data.Set as Set
 import qualified Data.List as List
 import qualified Data.Text as Text
+import qualified Data.Maybe as Maybe
 
 import Grammar (CFG(CFG), Rule(Rule))
 import Algorithm (removeSimpleRules, createCNF)
 
 main :: IO ()
 main = do
-  contents <- IO.readFile "test/cfg-cv4_8_12.txt"
-  -- contents <- IO.readFile "test/cfg-pr4_17.txt"
-  let grammar = parseGrammar (lines contents)
-  --print grammar
-  --putStrLn ""
-  print (createCNF (removeSimpleRules grammar))
-  return ()
+  args <- Environment.getArgs
+  let (mode, fpath) = parseArgs args
+  if mode == "h"
+    then do
+      putStr help
+      return ()
+    else do
+      contents <- readInput fpath
+      let grammar = parseGrammar (lines contents)
+      case mode of
+        "i" -> print grammar
+        "1" -> print (removeSimpleRules grammar)
+        "2" -> print (createCNF (removeSimpleRules grammar))
+        _ -> error ("Invalid mode [" ++ mode ++ "]")
+      return ()
+
+readInput :: Maybe String -> IO String -- TODO
+readInput fpath = IO.readFile (Maybe.fromJust fpath)
 
 parseGrammar :: [String] -> CFG
 parseGrammar ls
@@ -89,3 +102,26 @@ splitStr delim str =
     txt = Text.pack str
     parts = Text.splitOn (Text.pack delim) txt
   in map Text.unpack parts
+
+
+parseArgs :: [String] -> (String, Maybe String)
+parseArgs [] = ("h", Nothing)
+parseArgs [mode] = (parseMode mode, Nothing)
+parseArgs [mode, path] = (parseMode mode, Just path)
+parseArgs _ = error ("Error: Supplied more than two arguments\n" ++ help)
+
+parseMode :: String -> String
+parseMode str = case str of
+  "-i" -> "i"
+  "-1" -> "1"
+  "-2" -> "2"
+  _ -> error ("Error: Invalid argument [" ++ str ++ "]\n" ++ help)
+
+help :: String
+help =
+  "Usage:\n" ++
+  "./flp-fun <mode> [path]\n\n" ++
+  "mode:\n" ++
+  " -i: print loaded grammar\n" ++
+  " -1: print grammar without simple rules\n" ++
+  " -2: print grammar without cnf\n"
