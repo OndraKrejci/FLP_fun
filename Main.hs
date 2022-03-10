@@ -4,7 +4,6 @@ import qualified System.Environment as Environment
 import qualified Data.Set as Set
 import qualified Data.List as List
 import qualified Data.Text as Text
-import qualified Data.Maybe as Maybe
 
 import Grammar (CFG(CFG), Rule(Rule))
 import Algorithm (removeSimpleRules, createCNF)
@@ -27,8 +26,8 @@ main = do
         _ -> error ("Invalid mode [" ++ mode ++ "]")
       return ()
 
-readInput :: Maybe String -> IO String -- TODO
-readInput fpath = IO.readFile (Maybe.fromJust fpath)
+readInput :: Maybe String -> IO String
+readInput = maybe IO.getContents IO.readFile
 
 parseGrammar :: [String] -> CFG
 parseGrammar ls
@@ -56,7 +55,6 @@ parseTerms :: String -> Set.Set String
 parseTerms line =
   let
     symbols = words line
-    -- validTerms = Set.fromList (map (:[]) ['a'..'z']) -- TODO
     validTerms = Set.union (Set.fromList (map (:[]) ['a'..'z'])) (Set.fromList ["+", "-", "*", "/", "(", ")", "[", "]"])
     fn symbol acc =
       if Set.member symbol validTerms
