@@ -43,7 +43,7 @@ parseGrammar ls
 parseNonterms :: String -> Set.Set String
 parseNonterms line =
   let
-    symbols = words line
+    symbols = splitStr "," line
     validNonterms = Set.fromList (map (:[]) ['A'..'Z'])
     fn symbol acc =
       if Set.member symbol validNonterms
@@ -54,7 +54,7 @@ parseNonterms line =
 parseTerms :: String -> Set.Set String
 parseTerms line =
   let
-    symbols = words line
+    symbols = splitStr "," line
     validTerms = Set.union (Set.fromList (map (:[]) ['a'..'z'])) (Set.fromList ["+", "-", "*", "/", "(", ")", "[", "]"])
     fn symbol acc =
       if Set.member symbol validTerms
