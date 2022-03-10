@@ -94,21 +94,21 @@ replaceChomskyNontermRule :: Rule -> Set.Set String -> Set.Set String -> (Set.Se
 replaceChomskyNontermRule rule@(Rule left right) nonterms terms =
     if length right <= 2
         then error ("Invalid usage: right side of the rule [" ++ show rule ++ "] has less than 3 symbols")
-        else (Set.insert newRule rulesAcc, Set.insert mergedNonterm mergedNontermsAcc, newTermNonterms)
+        else (Set.insert newRule rulesOut, Set.insert mergedNonterm mergedNontermsOut, newTermNonterms)
     where
-        (newRightSide, mergedNonterm, termNonterm) = createRightSide right nonterms
+        (newRightSide, mergedNonterm, termNonterm) = createRightSide right
         newRule = Rule left newRightSide
-        (rulesAcc, mergedNontermsAcc, termNontermsAcc) = replaceChomskyNontermRule' (tail right) (Set.empty, Set.empty, Set.empty)
+        (rulesOut, mergedNontermsOut, termNontermsOut) = replaceChomskyNontermRule' (tail right) (Set.empty, Set.empty, Set.empty)
         newTermNonterms =
             if Maybe.isJust termNonterm
-                then Set.insert (Maybe.fromJust termNonterm) termNontermsAcc
-                else termNontermsAcc
+                then Set.insert (Maybe.fromJust termNonterm) termNontermsOut
+                else termNontermsOut
 
-        createRightSide :: [String] -> Set.Set String -> ([String], String, Maybe String)
-        createRightSide right nonterms =
+        createRightSide :: [String] -> ([String], String, Maybe String)
+        createRightSide rightSide =
             let
-                first = head right
-                nt2 = getMergedNontermSymbol (tail right)
+                first = head rightSide
+                nt2 = getMergedNontermSymbol (tail rightSide)
             in
                 if Set.member first nonterms
                     then ([first, nt2], nt2, Nothing)
@@ -117,27 +117,27 @@ replaceChomskyNontermRule rule@(Rule left right) nonterms terms =
                         in ([nt1, nt2], nt2, Just nt1)
 
         replaceChomskyNontermRule' :: [String] -> (Set.Set Rule, Set.Set String, Set.Set String) -> (Set.Set Rule, Set.Set String, Set.Set String)
-        replaceChomskyNontermRule' right (rulesAcc, mergedNontermsAcc, termNontermsAcc)
-            | length right < 2 = error ("Right side of the rule is too short [" ++ List.intercalate "" right ++ "]")
-            | length right == 2 = (Set.insert finalRule rulesAcc, mergedNontermsAcc, Set.union finalNonterms termNontermsAcc)
-            | otherwise = (Set.insert newRule rulesAcc', Set.insert mergedNonterm' mergedNontermsAcc', newTermNonterms)
+        replaceChomskyNontermRule' right' (rulesAcc, mergedNontermsAcc, termNontermsAcc)
+            | length right' < 2 = error ("Right side of the rule is too short [" ++ List.intercalate "" right' ++ "]")
+            | length right' == 2 = (Set.insert finalRule rulesAcc, mergedNontermsAcc, Set.union finalNonterms termNontermsAcc)
+            | otherwise = (Set.insert newRule' rulesAcc', Set.insert mergedNonterm' mergedNontermsAcc', newTermNonterms')
             where
-                nt1 = getMergedNontermSymbol right
-                (newRightSide, mergedNonterm', termNonterm') = createRightSide right nonterms
-                newRule = Rule nt1 newRightSide
-                newTermNonterms =
+                nt1 = getMergedNontermSymbol right'
+                (newRightSide', mergedNonterm', termNonterm') = createRightSide right'
+                newRule' = Rule nt1 newRightSide'
+                newTermNonterms' =
                     if Maybe.isJust termNonterm'
                         then Set.insert (Maybe.fromJust termNonterm') termNontermsAcc'
                         else termNontermsAcc'
 
                 (finalRule, finalNonterms) =
-                    if any (`Set.member` terms) right
+                    if any (`Set.member` terms) right'
                         then replaceChomskyTermRule tempRule terms
                         else (tempRule, Set.empty)
                     where
-                        tempRule = Rule nt1 right
+                        tempRule = Rule nt1 right'
 
-                (rulesAcc', mergedNontermsAcc', termNontermsAcc') = replaceChomskyNontermRule' (tail right) (rulesAcc, mergedNontermsAcc, termNontermsAcc)
+                (rulesAcc', mergedNontermsAcc', termNontermsAcc') = replaceChomskyNontermRule' (tail right') (rulesAcc, mergedNontermsAcc, termNontermsAcc)
 
 getNewSingleNontermSymbol :: String -> String
 getNewSingleNontermSymbol nonterm = nonterm ++ "'"
