@@ -1,13 +1,9 @@
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use head" #-}
-
 module Algorithm (removeSimpleRules, createCNF) where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Data.List as List
-import qualified Data.Maybe as Maybe
 
 import Grammar (CFG(CFG), Rule(..))
 
@@ -17,28 +13,20 @@ simpleRulesSet :: Set.Set String -> Set.Set Rule -> Set.Set String -> Set.Set St
 simpleRulesSet ni rules nonterms
     | Set.null rules = Set.empty
     | otherwise =
-        let nni = Set.union ni (Set.fromList [head ruleRes | rule <- Set.toList rules, let ruleRes = _right rule, Set.member (_left rule) ni && isSingleNonterm ruleRes nonterms])
+        let
+            fn :: Rule -> Set.Set String -> Set.Set String
+            fn rule@(Rule left right) acc =
+                if Set.member left ni && isSimpleRule rule nonterms
+                    then Set.insert (head right) acc
+                    else acc
+            nni = Set.union ni (foldr fn Set.empty rules)
         in if nni == ni then ni else simpleRulesSet nni rules nonterms
 
-simpleRulesSet' :: Set.Set String -> Set.Set Rule -> Set.Set String -> Set.Set String
-simpleRulesSet' ni rules nonterms =
-    let
-        fn rule acc =
-            let ruleRes = _right rule in
-                if Set.member (_left rule) ni && isSingleNonterm ruleRes nonterms
-                    then Set.insert (head ruleRes) acc
-                    else acc
-        nni = Set.union ni (foldr fn Set.empty rules)
-    in if nni == ni then ni else simpleRulesSet nni rules nonterms
-
 generateSimpleRuleSets :: Set.Set String -> Set.Set Rule -> Map.Map String (Set.Set String)
-generateSimpleRuleSets nonterms rules = foldr (\x acc -> Map.insert x (simpleRulesSet' (Set.singleton x) rules nonterms) acc) Map.empty nonterms
-
-isSingleNonterm :: [String] -> Set.Set String -> Bool
-isSingleNonterm symbols nonterms = length symbols == 1 && Set.member (head symbols) nonterms
+generateSimpleRuleSets nonterms rules = foldr (\x acc -> Map.insert x (simpleRulesSet (Set.singleton x) rules nonterms) acc) Map.empty nonterms
 
 isSimpleRule :: Rule -> Set.Set String -> Bool
-isSimpleRule (Rule _ right) = isSingleNonterm right
+isSimpleRule (Rule _ right) nonterms = length right == 1 && Set.member (head right) nonterms
 
 getNonSimpleRules :: Set.Set Rule -> Set.Set String -> Set.Set Rule
 getNonSimpleRules rules nonterms = Set.filter (\rule -> not $ isSimpleRule rule nonterms) rules
@@ -46,9 +34,13 @@ getNonSimpleRules rules nonterms = Set.filter (\rule -> not $ isSimpleRule rule 
 removeSimpleRules :: CFG -> CFG
 removeSimpleRules (CFG nonterms terms rules start) =
     let
-        rulesList = Set.toList (getNonSimpleRules rules nonterms)
-        simpleRulesNontermsList = Map.toList (generateSimpleRuleSets nonterms rules)
-        nrules = Set.fromList [Rule key right | (Rule left right) <- rulesList, (key, val) <- simpleRulesNontermsList, Set.member left val]
+        nonSimpleRules = getNonSimpleRules rules nonterms
+        simpleRulesSets = generateSimpleRuleSets nonterms rules
+
+        replaceRule :: Rule -> Set.Set Rule
+        replaceRule (Rule left right) = Map.foldrWithKey (\key val acc -> if Set.member left val then Set.insert (Rule key right) acc else acc) Set.empty simpleRulesSets
+
+        nrules = foldr (\rule acc -> Set.union acc (replaceRule rule)) Set.empty nonSimpleRules
     in CFG nonterms terms nrules start
 
 ---- Algorithm 4.7 Transform a proper grammar into grammar in Chomsky normal form
@@ -56,30 +48,29 @@ removeSimpleRules (CFG nonterms terms rules start) =
 createCNF :: CFG -> CFG
 createCNF (CFG nonterms terms rules start) =
     let
-        initialP' = foldr (\rule acc -> if isSingleTerm (_right rule) terms || isTwoNonterms (_right rule) nonterms then Set.insert rule acc else acc) Set.empty rules
-        nontermRules = foldr (\rule acc -> if length (_right rule) > 2 then Set.insert rule acc else acc) Set.empty rules
+        initialP' = foldr (\rule@(Rule _ right) acc -> if isOneSymbol right terms || isTwoSymbols right nonterms then Set.insert rule acc else acc) Set.empty rules
+        remainingNonterms = foldr (\(Rule left _) acc -> Set.insert left acc) Set.empty initialP'
+        
         (replacedNontermRules, replacedMergedNonterms, replacedTermNonterms1) = replaceChomskyNontermRules nontermRules nonterms terms
-        termRules = foldr (\rule acc -> if isOneOrTwoTerms (_right rule) terms then Set.insert rule acc else acc) Set.empty rules
+            where nontermRules = foldr (\rule@(Rule _ right) acc -> if length right > 2 then Set.insert rule acc else acc) Set.empty rules
         (replacedTermRules, replacedTermNonterms2) = replaceChomskyTermRules termRules terms
+            where termRules = foldr (\rule@(Rule _ right) acc -> if isOneOrTwoSymbols right terms then Set.insert rule acc else acc) Set.empty rules
 
         replacedTermNonterms = Set.union replacedTermNonterms1 replacedTermNonterms2
-
         nontermToTermRules = generateNontermToTermRules replacedTermNonterms
 
-        remainingNonterms = foldr (\(Rule left _) acc -> Set.insert left acc) Set.empty initialP'
-
         rules' = foldr1 Set.union [initialP', replacedNontermRules, replacedTermRules, nontermToTermRules]
-        nonterms' = foldr1 Set.union [replacedMergedNonterms, replacedTermNonterms, remainingNonterms]
+        nonterms' = foldr1 Set.union [remainingNonterms, replacedMergedNonterms, replacedTermNonterms]
     in CFG nonterms' terms rules' start
 
-isSingleTerm :: [String] -> Set.Set String -> Bool
-isSingleTerm symbols terms = length symbols == 1 && Set.member (head symbols) terms
+isOneSymbol :: [String] -> Set.Set String -> Bool
+isOneSymbol str symbols = length str == 1 && Set.member (head str) symbols
 
-isTwoNonterms :: [String] -> Set.Set String -> Bool
-isTwoNonterms symbols nonterms = length symbols == 2 && all (`Set.member` nonterms) symbols
+isTwoSymbols :: [String] -> Set.Set String -> Bool
+isTwoSymbols str symbols = length str == 2 && all (`Set.member` symbols) str
 
-isOneOrTwoTerms :: [String] -> Set.Set String -> Bool
-isOneOrTwoTerms symbols terms = length symbols == 2 && any (`Set.member` terms) symbols
+isOneOrTwoSymbols :: [String] -> Set.Set String -> Bool
+isOneOrTwoSymbols str symbols = length str == 2 && any (`Set.member` symbols) str
 
 replaceChomskyNontermRules :: Set.Set Rule -> Set.Set String -> Set.Set String -> (Set.Set Rule, Set.Set String, Set.Set String)
 replaceChomskyNontermRules rules nonterms terms =
@@ -91,53 +82,28 @@ replaceChomskyNontermRules rules nonterms terms =
     in foldr fn (Set.empty, Set.empty, Set.empty) rules
 
 replaceChomskyNontermRule :: Rule -> Set.Set String -> Set.Set String -> (Set.Set Rule, Set.Set String, Set.Set String)
-replaceChomskyNontermRule rule@(Rule left right) nonterms terms =
-    if length right <= 2
-        then error ("Invalid usage: right side of the rule [" ++ show rule ++ "] has less than 3 symbols")
-        else (Set.insert newRule rulesOut, Set.insert mergedNonterm mergedNontermsOut, newTermNonterms)
+replaceChomskyNontermRule rule@(Rule left right) nonterms terms
+    | length right < 2 = error ("Invalid usage: right side of the rule [" ++ show rule ++ "] has less than 2 symbols")
+    | length right == 2 =
+        if any (`Set.member` terms) right
+            then
+                let (finalRule, finalNonterms) = replaceChomskyTermRule rule terms
+                in (Set.singleton finalRule, Set.empty, finalNonterms)
+            else (Set.singleton rule, Set.empty, Set.empty)
+    | otherwise = (Set.insert newRule rulesRec, Set.insert mergedNonterm mergedNontermsRec, Set.union termNonterm termNontermsRec)
     where
-        (newRightSide, mergedNonterm, termNonterm) = createRightSide right
-        newRule = Rule left newRightSide
-        (rulesOut, mergedNontermsOut, termNontermsOut) = replaceChomskyNontermRule' (tail right) (Set.empty, Set.empty, Set.empty)
-        newTermNonterms =
-            if Maybe.isJust termNonterm
-                then Set.insert (Maybe.fromJust termNonterm) termNontermsOut
-                else termNontermsOut
-
-        createRightSide :: [String] -> ([String], String, Maybe String)
-        createRightSide rightSide =
+        (rightSide, mergedNonterm, termNonterm) =
             let
-                first = head rightSide
-                nt2 = getMergedNontermSymbol (tail rightSide)
+                first = head right
+                nt2 = getMergedNontermSymbol (tail right)
             in
                 if Set.member first nonterms
-                    then ([first, nt2], nt2, Nothing)
+                    then ([first, nt2], nt2, Set.empty)
                     else
                         let nt1 = getNewSingleNontermSymbol first
-                        in ([nt1, nt2], nt2, Just nt1)
-
-        replaceChomskyNontermRule' :: [String] -> (Set.Set Rule, Set.Set String, Set.Set String) -> (Set.Set Rule, Set.Set String, Set.Set String)
-        replaceChomskyNontermRule' right' (rulesAcc, mergedNontermsAcc, termNontermsAcc)
-            | length right' < 2 = error ("Right side of the rule is too short [" ++ List.intercalate "" right' ++ "]")
-            | length right' == 2 = (Set.insert finalRule rulesAcc, mergedNontermsAcc, Set.union finalNonterms termNontermsAcc)
-            | otherwise = (Set.insert newRule' rulesAcc', Set.insert mergedNonterm' mergedNontermsAcc', newTermNonterms')
-            where
-                nt1 = getMergedNontermSymbol right'
-                (newRightSide', mergedNonterm', termNonterm') = createRightSide right'
-                newRule' = Rule nt1 newRightSide'
-                newTermNonterms' =
-                    if Maybe.isJust termNonterm'
-                        then Set.insert (Maybe.fromJust termNonterm') termNontermsAcc'
-                        else termNontermsAcc'
-
-                (finalRule, finalNonterms) =
-                    if any (`Set.member` terms) right'
-                        then replaceChomskyTermRule tempRule terms
-                        else (tempRule, Set.empty)
-                    where
-                        tempRule = Rule nt1 right'
-
-                (rulesAcc', mergedNontermsAcc', termNontermsAcc') = replaceChomskyNontermRule' (tail right') (rulesAcc, mergedNontermsAcc, termNontermsAcc)
+                        in ([nt1, nt2], nt2, Set.singleton nt1)
+        newRule = Rule left rightSide
+        (rulesRec, mergedNontermsRec, termNontermsRec) = replaceChomskyNontermRule (Rule mergedNonterm (tail right)) nonterms terms
 
 getNewSingleNontermSymbol :: String -> String
 getNewSingleNontermSymbol nonterm = nonterm ++ "'"
@@ -154,15 +120,18 @@ replaceChomskyTermRules rules terms =
             in (Set.insert newRule rulesAcc, Set.union nonterms nontermsAcc)
     in foldr fn (Set.empty, Set.empty) rules
 
-replaceChomskyTermRule :: Rule -> Set.Set String -> (Rule, Set.Set String)
-replaceChomskyTermRule rule@(Rule left right) terms
-    | all (`Set.member` terms) right = (Rule left [replacement1, replacement2], Set.fromList [replacement1, replacement2])
-    | Set.member (right!!0) terms = (Rule left [replacement1, right!!1], Set.singleton replacement1)
-    | Set.member (right!!1) terms = (Rule left [right!!0, replacement2], Set.singleton replacement2)
-    | otherwise = error ("Supplied invalid rule: " ++ show rule)
-    where
-        replacement1 = getNewSingleNontermSymbol (right!!0)
-        replacement2 = getNewSingleNontermSymbol (right!!1)
+replaceChomskyTermRule :: Rule -> Set.Set String-> (Rule, Set.Set String)
+replaceChomskyTermRule (Rule left right) terms =
+    let
+        fn :: String -> ([String], Set.Set String) -> ([String], Set.Set String)
+        fn symbol (symbols, nts) =
+            if Set.member symbol terms
+                then
+                    let replacement = getNewSingleNontermSymbol symbol
+                    in (replacement:symbols, Set.insert replacement nts)
+                else (symbol:symbols, nts)
+        (rightSide, newNonterms) = foldr fn ([], Set.empty) right
+    in (Rule left rightSide, newNonterms)
 
 generateNontermToTermRules :: Set.Set String -> Set.Set Rule
 generateNontermToTermRules = foldr (\x acc -> Set.insert (Rule x [init x]) acc) Set.empty
