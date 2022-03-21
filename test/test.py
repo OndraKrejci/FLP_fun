@@ -16,6 +16,9 @@ class Rule():
 	def __str__(self) -> str:
 		return '%s->%s' % (self.left, self.right)
 
+	def __repr__(self) -> str:
+		return self.__str__()
+
 	def __hash__(self) -> int:
 		return hash(str(self))
 
@@ -52,6 +55,35 @@ class CFG():
 			self.start == __o.start and
 			self.rules == __o.rules
 		)
+
+	@staticmethod
+	def print_set_diff(ref: set, other: set, name: str) -> None:
+		miss = other - ref
+		addi = ref - other
+		if miss or addi:
+			print(name)
+			if miss:
+				print('+: %s' % miss)
+			if addi:
+				print('-: %s' % addi)
+
+	# prints differences in the other grammar using self as reference
+	def print_diff(self, other: 'CFG') -> None:
+		self.print_set_diff(self.nonterms, other.nonterms, 'NONTERMS')
+		self.print_set_diff(self.terms, other.terms, 'TERMS')
+
+		if self.start != other.start:
+			print('START\n%s != %s' % (other.start, self.start))
+
+		self.print_set_diff(self.rules, other.rules, 'RULES')
+
+TESTS = [
+	{'in': 'cfg-pr4_14.txt', 'out': 'cfg-pr4_14.txt', 'mode': '-i'},
+	{'in': 'cfg-pr4_14.txt', 'out': 'cfg-pr4_14.out', 'mode': '-1'},
+	{'in': 'cfg-pr4_17.txt', 'out': 'cfg-pr4_17.out', 'mode': '-2'},
+	{'in': 'cfg-cv4_8_12.txt', 'out': 'cfg-cv4_8_12.out', 'mode': '-2'},
+	{'in': 'il-ex3.txt', 'out': 'il-ex3.out', 'mode': '-2'} # https://courses.engr.illinois.edu/cs373/fa2013/lectures/lec17.pdf
+]
 
 def load_cfg(fpath: str) -> CFG:
 	with open(fpath, 'r') as inputf:
@@ -115,7 +147,11 @@ def parse_rules(lines: List[str], nonterms: Set[str]) -> Set[Rule]:
 
 	return rules
 
-def test(args: List[str], refpath: str) -> None:
+def run_proc(args: List[str]) -> Tuple[str, str]:
+	proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+	return proc.communicate(timeout=2)
+
+def run_test(args: List[str], refpath: str) -> None:
 	refcfg = load_cfg(refpath)
 	command = ['../flp21-fun'] + args
 	out, _ = run_proc(command)
@@ -127,19 +163,11 @@ def test(args: List[str], refpath: str) -> None:
 		print('[PASS] ' + desc)
 	else:
 		print('[FAIL] ' + desc)
-		print(testcfg)
-		print()
-		print(refcfg)
+		refcfg.print_diff(testcfg)
 
 def run_tests() -> None:
-	test(['-i', 'cfg-pr4_14.txt'], 'cfg-pr4_14.txt')
-	test(['-1', 'cfg-pr4_14.txt'], 'cfg-pr4_14.out')
-	test(['-2', 'cfg-pr4_17.txt'], 'cfg-pr4_17.out')
-	test(['-2', 'cfg-cv4_8_12.txt'], 'cfg-cv4_8_12.out')
-
-def run_proc(args: List[str]) -> Tuple[str, str]:
-	proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-	return proc.communicate(timeout=2)
+	for test in TESTS:
+		run_test([test['mode'], test['in']], test['out'])
 
 if __name__ == '__main__':
 	run_tests()

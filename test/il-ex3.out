@@ -1,0 +1,15 @@
+a',b',S,A,B,<aa>,<AAb>,<Ab>
+a,b
+S
+a'->a
+b'->b
+S->a'A
+S->b'B
+S->b
+A->b'a'
+B->a'b'
+A->B<aa>
+<aa>->a'a'
+B->b'<AAb>
+<AAb>->A<Ab>
+<Ab>->Ab'
