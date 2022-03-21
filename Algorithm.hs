@@ -49,7 +49,6 @@ createCNF :: CFG -> CFG
 createCNF (CFG nonterms terms rules start) =
     let
         initialP' = foldr (\rule@(Rule _ right) acc -> if isOneSymbol right terms || isTwoSymbols right nonterms then Set.insert rule acc else acc) Set.empty rules
-        remainingNonterms = foldr (\(Rule left _) acc -> Set.insert left acc) Set.empty initialP'
         
         (replacedNontermRules, replacedMergedNonterms, replacedTermNonterms1) = replaceChomskyNontermRules nontermRules nonterms terms
             where nontermRules = foldr (\rule@(Rule _ right) acc -> if length right > 2 then Set.insert rule acc else acc) Set.empty rules
@@ -60,7 +59,7 @@ createCNF (CFG nonterms terms rules start) =
         nontermToTermRules = generateNontermToTermRules replacedTermNonterms
 
         rules' = foldr1 Set.union [initialP', replacedNontermRules, replacedTermRules, nontermToTermRules]
-        nonterms' = foldr1 Set.union [remainingNonterms, replacedMergedNonterms, replacedTermNonterms]
+        nonterms' = foldr1 Set.union [nonterms, replacedMergedNonterms, replacedTermNonterms]
     in CFG nonterms' terms rules' start
 
 isOneSymbol :: [String] -> Set.Set String -> Bool
