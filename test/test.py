@@ -1,8 +1,14 @@
 
+import os
 import sys
 import subprocess
 
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
+
+BIN_NAME = 'flp21-fun'
+
+TEST_DIR = os.path.realpath(os.path.dirname(__file__))
+BIN_PATH = os.path.realpath(os.path.join(TEST_DIR, '..', BIN_NAME))
 
 def err_exit(message: str, code: int = 1) -> None:
 	print(message, file=sys.stderr)
@@ -151,13 +157,14 @@ def run_proc(args: List[str]) -> Tuple[str, str]:
 	proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
 	return proc.communicate(timeout=2)
 
-def run_test(args: List[str], refpath: str) -> None:
+def run_test(args: List[str], refpath: str, desc: Optional[str] = None) -> None:
 	refcfg = load_cfg(refpath)
-	command = ['../flp21-fun'] + args
+	command = [BIN_PATH] + args
 	out, _ = run_proc(command)
 	testcfg = parse_cfg(out.splitlines())
 
-	desc = '(%s) (%s)' % (' '.join(command), refpath)
+	if desc is None:
+		desc = '(%s) (%s)' % (' '.join(command), refpath)
 
 	if testcfg == refcfg:
 		print('[PASS] ' + desc)
@@ -167,7 +174,8 @@ def run_test(args: List[str], refpath: str) -> None:
 
 def run_tests() -> None:
 	for test in TESTS:
-		run_test([test['mode'], test['in']], test['out'])
+		desc = ('(%s %s) (%s)' % (test['mode'], test['in'], test['out']))
+		run_test([test['mode'], os.path.join(TEST_DIR, test['in'])], os.path.join(TEST_DIR, test['out']), desc)
 
 if __name__ == '__main__':
 	run_tests()
