@@ -1,5 +1,5 @@
 
-module Grammar (Rule(..), CFG(..)) where
+module Grammar (Rule(..), CFG(..), validNonterms, validTerms) where
 
 import qualified Data.Set as Set
 import qualified Data.List as List
@@ -29,3 +29,9 @@ instance Show CFG where
     List.intercalate "," (Set.toList terms) ++ "\n" ++
     start ++ "\n" ++
     List.intercalate "\n" (map show (Set.toList rules))
+
+validNonterms :: Set.Set String
+validNonterms = Set.fromList (map (:[]) ['A'..'Z'])
+
+validTerms :: Set.Set String
+validTerms = Set.fromList (map (:[]) (['a'..'z'] ++ ['+', '-', '*', '/', '(', ')', '[', ']']))

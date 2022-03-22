@@ -5,7 +5,7 @@ import qualified System.IO as IO
 import qualified Data.Set as Set
 import qualified Data.List as List
 
-import Grammar (CFG(CFG), Rule(Rule))
+import Grammar (CFG(..), Rule(..), validNonterms, validTerms)
 import Util (splitStr)
 
 -- Reads all input from a file if a file path is supplied, otherwise uses stdin
@@ -21,22 +21,24 @@ parseGrammar ls
     let
       nonterms = parseNonterms (head ls)
       terms = parseTerms (ls!!1)
-      rules = parseRules (drop 3 ls) nonterms terms
-      start = parseStartSymbol (ls!!2) nonterms
-    in CFG nonterms terms rules start
+    in CFG {
+      _nonterms = nonterms,
+      _terms = terms,
+      _rules = parseRules (drop 3 ls) nonterms terms,
+      _start = validateStartSymbol (ls!!2) nonterms
+    }
 
 -- Creates a set of nonterminal symbols from a comma separated list
 -- Nonterminal must be an upper case letter
 parseNonterms :: String -> Set.Set String
 parseNonterms line =
   let
-    symbols = splitStr "," line
-    validNonterms = Set.fromList (map (:[]) ['A'..'Z'])
-    fn symbol acc =
+    validateNonterm :: String -> Set.Set String -> Set.Set String
+    validateNonterm symbol acc =
       if Set.member symbol validNonterms
         then Set.insert symbol acc
         else error ("Invalid nonterminal symbol [" ++ symbol ++ "]")
-  in foldr fn Set.empty symbols
+  in foldr validateNonterm Set.empty (splitStr "," line)
 
 -- Creates a set of terminal symbols from a comma separated list
 -- Terminal must be a lower case letter,
@@ -44,17 +46,16 @@ parseNonterms line =
 parseTerms :: String -> Set.Set String
 parseTerms line =
   let
-    symbols = splitStr "," line
-    validTerms = Set.union (Set.fromList (map (:[]) ['a'..'z'])) (Set.fromList ["+", "-", "*", "/", "(", ")", "[", "]"])
-    fn symbol acc =
+    validateTerm :: String -> Set.Set String -> Set.Set String
+    validateTerm symbol acc =
       if Set.member symbol validTerms
         then Set.insert symbol acc
         else error ("Invalid terminal symbol [" ++ symbol ++ "]")
-  in foldr fn Set.empty symbols
+  in foldr validateTerm Set.empty (splitStr "," line)
 
 -- Validates that the start symbol is a nonterminal
-parseStartSymbol :: String -> Set.Set String -> String
-parseStartSymbol start nonterms =
+validateStartSymbol :: String -> Set.Set String -> String
+validateStartSymbol start nonterms =
   if Set.member start nonterms
     then start
     else error ("Start symbol [" ++ start ++ "] is not a nonterminal symbol")
@@ -72,20 +73,26 @@ parseRule :: String -> Set.Set String -> Set.Set String -> Rule
 parseRule line nonterms terms =
   let
     parts = splitStr "->" line
-    handleLeft left =
+
+    validateLeft :: String -> String
+    validateLeft left =
         if Set.member left nonterms
           then left
-          else error ("Unknown nonterminal symbol [" ++ left ++ " ]" ++ "in rule: " ++ line)
-    handleRight right =
-      let invalid = foldr (\x acc -> if Set.member x terms || Set.member x nonterms then acc else x:acc) [] right
+          else error ("Unknown nonterminal symbol [" ++ left ++ "]" ++ "in rule: " ++ line)
+
+    parseRight :: String -> [String]
+    parseRight right =
+      let
+        symbols = map (:[]) right
+        invalid = [x | x <- symbols, Set.notMember x terms && Set.notMember x nonterms]
       in
         if null invalid
-          then right
+          then symbols
           else error ("Unknown symbols [" ++ List.intercalate ", " invalid ++ "] in rule: " ++ line)
-    makeRule left rightStr =
-      let right = map (:[]) rightStr
-      in Rule (handleLeft left) (handleRight right)
   in
     if length parts /= 2
       then error ("Invalid rule: " ++ line)
-      else makeRule (head parts) (parts!!1)
+      else Rule {
+        _left = validateLeft (head parts),
+        _right = parseRight (parts!!1)
+      }
