@@ -1,0 +1,17 @@
+T,A,S,B
+a,b
+T
+T->ASB
+T->SB
+T->AS
+S->ASB
+S->SB
+S->AS
+A->aAS
+A->a
+A->aS
+B->SbS
+B->bb
+B->aAS
+B->a
+B->aS

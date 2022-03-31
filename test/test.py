@@ -10,6 +10,10 @@ BIN_NAME = 'flp21-fun'
 TEST_DIR = os.path.realpath(os.path.dirname(__file__))
 BIN_PATH = os.path.realpath(os.path.join(TEST_DIR, '..', BIN_NAME))
 
+class ParseException(Exception):
+    def __init__(self, message: str = ''):
+        super().__init__(message)
+
 def err_exit(message: str, code: int = 1) -> None:
 	print(message, file=sys.stderr)
 	sys.exit(code)
@@ -88,7 +92,8 @@ TESTS = [
 	{'in': 'cfg-pr4_14.txt', 'out': 'cfg-pr4_14.out', 'mode': '-1'},
 	{'in': 'cfg-pr4_17.txt', 'out': 'cfg-pr4_17.out', 'mode': '-2'},
 	{'in': 'cfg-cv4_8_12.txt', 'out': 'cfg-cv4_8_12.out', 'mode': '-2'},
-	{'in': 'il-ex3.txt', 'out': 'il-ex3.out', 'mode': '-2'} # https://courses.engr.illinois.edu/cs373/fa2013/lectures/lec17.pdf
+	{'in': 'il-ex3.txt', 'out': 'il-ex3.out', 'mode': '-2'}, # https://courses.engr.illinois.edu/cs373/fa2013/lectures/lec17.pdf
+	{'in': 'wa-ex.txt', 'out': 'wa-ex.out', 'mode': '-2'} # https://courses.cs.washington.edu/courses/cse322/08au/lec14.pdf
 ]
 
 def load_cfg(fpath: str) -> CFG:
@@ -97,7 +102,7 @@ def load_cfg(fpath: str) -> CFG:
 
 def parse_cfg(lines: List[str]) -> CFG:
 	if len(lines) < 4:
-		err_exit('Grammar definition shorter than 4 lines')
+		raise ParseException('Grammar definition shorter than 4 lines')
 
 	nonterms = parse_nonterms(lines[0])
 	terms = parse_terms(lines[1])
@@ -127,7 +132,7 @@ def parse_terms(line: str) -> Set[str]:
 		if symbol.islower() or symbol in ["+", "-", "*", "/", "(", ")", "[", "]"]:
 			terms.add(symbol)
 		else:
-			err_exit('Invalid term [%s]' % symbol)
+			raise ParseException('Invalid term [%s]' % symbol)
 	return terms
 
 def parse_start(line: str, nonterms: Set[str]) -> str:
@@ -135,7 +140,7 @@ def parse_start(line: str, nonterms: Set[str]) -> str:
 	if start in nonterms:
 		return start
 	else:
-		err_exit('Start symbol [%s] not a nonterminal' % start)
+		raise ParseException('Start symbol [%s] not a nonterminal' % start)
 
 def parse_rules(lines: List[str], nonterms: Set[str]) -> Set[Rule]:
 	rules = set()
@@ -144,10 +149,10 @@ def parse_rules(lines: List[str], nonterms: Set[str]) -> Set[Rule]:
 		parts = line.split('->')
 
 		if len(parts) != 2:
-			err_exit('Invalid rule [%s]' % line)
+			raise ParseException('Invalid rule [%s]' % line)
 
 		if parts[0] not in nonterms:
-			err_exit('Unknown nonterminal symbol [%s] in rule [%s]' % (parts[0], line))
+			raise ParseException('Unknown nonterminal symbol [%s] in rule [%s]' % (parts[0], line))
 		
 		rules.add(Rule(parts[0], parts[1]))
 
@@ -158,10 +163,20 @@ def run_proc(args: List[str]) -> Tuple[str, str]:
 	return proc.communicate(timeout=2)
 
 def run_test(args: List[str], refpath: str, desc: Optional[str] = None) -> None:
-	refcfg = load_cfg(refpath)
+	try:
+		refcfg = load_cfg(refpath)
+	except ParseException as exc:
+		print('Invalid reference grammar [%s]' % refpath, file=sys.stderr)
+		err_exit(str(exc))
+
 	command = [BIN_PATH] + args
-	out, _ = run_proc(command)
-	testcfg = parse_cfg(out.splitlines())
+	out, err = run_proc(command)
+
+	try:
+		testcfg = parse_cfg(out.splitlines())
+	except ParseException as exc: 
+		print(err, file=sys.stderr)
+		err_exit(str(exc))
 
 	if desc is None:
 		desc = '(%s) (%s)' % (' '.join(command), refpath)
