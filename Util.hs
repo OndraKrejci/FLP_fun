@@ -1,7 +1,6 @@
 
 module Util where
 
-import qualified Data.Text as Text
 import qualified Data.Maybe as Maybe
 
 -- Splits string on a delimiter
@@ -25,11 +24,3 @@ splitStr delim str =
         let idx = Maybe.fromJust maybeIdx
         in take idx str : splitStr delim (drop (idx + delimLen) str)
       else [str]
-
--- Splits string on a delimiter string using Data.Text.splitOn :)
-splitStrText :: String -> String -> [String]
-splitStrText delim str =
-  let
-    txt = Text.pack str
-    parts = Text.splitOn (Text.pack delim) txt
-  in map Text.unpack parts
