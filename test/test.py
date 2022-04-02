@@ -129,7 +129,7 @@ def parse_terms(line: str) -> Set[str]:
 	terms = set()
 	for symbol in symbols:
 		symbol = symbol.strip()
-		if symbol.islower() or symbol in ["+", "-", "*", "/", "(", ")", "[", "]"]:
+		if symbol.islower() or symbol in ['+', '-', '*', '/', '(', ')', '[', ']']:
 			terms.add(symbol)
 		else:
 			raise ParseException('Invalid term [%s]' % symbol)
