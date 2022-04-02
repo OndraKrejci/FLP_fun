@@ -94,7 +94,7 @@ parseRule line nonterms terms =
           then symbols
           else error ("Unknown symbols [" ++ List.intercalate ", " invalid ++ "] in rule: " ++ line)
   in
-    if length parts /= 2
+    if length parts /= 2 || null (parts!!1)
       then error ("Invalid rule: " ++ line)
       else Rule {
         _left = validateLeft (head parts),
