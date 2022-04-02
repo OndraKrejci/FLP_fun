@@ -16,17 +16,13 @@ main :: IO ()
 main = do
   args <- Environment.getArgs
   let (mode, fpath) = parseArgs args
-  if mode == Help
-    then do
-      putStr help
-    else do
-      contents <- readInput fpath
-      let grammar = parseGrammar (lines contents)
-      case mode of
-        Print -> print grammar
-        RemoveSimple -> print (removeSimpleRules grammar)
-        Chomsky -> print (createCNF (removeSimpleRules grammar))
-        _ -> error ("Invalid mode [" ++ show mode ++ "]")
+  contents <- readInput fpath
+  let grammar = parseGrammar (lines contents)
+  case mode of
+    Help -> putStr help
+    Print -> print grammar
+    RemoveSimple -> print (removeSimpleRules grammar)
+    Chomsky -> print (createCNF (removeSimpleRules grammar))
 
 -- Parses the given list of arguments into a mode and a file path
 -- Mode is required, file path is optional, more than two arguments are not allowed
@@ -48,7 +44,7 @@ parseMode str = case str of
 -- Help text for the program
 help :: String
 help =
-  "Transform a context-free grammar without simple rules into Chomsky normal form\n" ++
+  "Transform a context-free grammar into Chomsky normal form\n" ++
   "Usage:\n" ++
   "./flp-fun <mode> [path]\n\n" ++
   "mode:\n" ++
