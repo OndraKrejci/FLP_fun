@@ -1,9 +1,13 @@
+-- FLP - Functional project - BKG-2-CNF
+-- Author: Ondřej Krejčí (xkrejc69)
+-- Year: 2022
+-- Utility functions
 
 module Util where
 
 import qualified Data.Maybe as Maybe
 
--- Splits string on a delimiter
+-- Splits a string on a delimiter
 splitStr :: String -> String -> [String]
 splitStr _ "" = [""]
 splitStr delim str =

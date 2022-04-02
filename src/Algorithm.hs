@@ -1,3 +1,8 @@
+-- FLP - Functional project - BKG-2-CNF
+-- Author: Ondřej Krejčí (xkrejc69)
+-- Year: 2022
+-- Implementation of algortihms 4.5 and 4.7 from TIN textbook
+-- transforming a proper context-free grammar into Chomsky normal form
 
 module Algorithm (removeSimpleRules, createCNF) where
 

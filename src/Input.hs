@@ -1,3 +1,7 @@
+-- FLP - Functional project - BKG-2-CNF
+-- Author: Ondřej Krejčí (xkrejc69)
+-- Year: 2022
+-- Handling of input, parsing a context-free grammar representation
 
 module Input(readInput, parseGrammar) where
 

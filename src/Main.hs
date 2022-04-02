@@ -1,3 +1,7 @@
+-- FLP - Functional project - BKG-2-CNF
+-- Author: Ondřej Krejčí (xkrejc69)
+-- Year: 2022
+-- Main
 
 import qualified System.Environment as Environment
 

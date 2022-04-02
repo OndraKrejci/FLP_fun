@@ -1,3 +1,7 @@
+-- FLP - Functional project - BKG-2-CNF
+-- Author: Ondřej Krejčí (xkrejc69)
+-- Year: 2022
+-- Datatypes for a context-free grammar, constants for valid symbols
 
 module Grammar (Rule(..), CFG(..), validNonterms, validTerms) where
 
