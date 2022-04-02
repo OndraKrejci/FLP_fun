@@ -28,7 +28,7 @@ removeSimpleRules (CFG nonterms terms rules start) =
     replaceRule :: Rule -> Set.Set Rule
     replaceRule (Rule left right) = Map.foldrWithKey (\key val acc -> if Set.member left val then Set.insert (Rule key right) acc else acc) Set.empty simpleRulesSets
 
-    nrules = foldr (\rule acc -> Set.union acc (replaceRule rule)) Set.empty nonSimpleRules
+    nrules = Set.foldr (\rule acc -> Set.union acc (replaceRule rule)) Set.empty nonSimpleRules
   in CFG nonterms terms nrules start
 
 -- Constructs a set of nonterminals for each nonterminal in input set,
@@ -36,7 +36,7 @@ removeSimpleRules (CFG nonterms terms rules start) =
 -- N_A = {B | A =>* B}
 -- Step 1 of algorithm 4.5
 generateSimpleRulesSets :: Set.Set String -> Set.Set Rule -> Map.Map String (Set.Set String)
-generateSimpleRulesSets nonterms rules = foldr (\x acc -> Map.insert x (generateSimpleRulesSet (Set.singleton x) rules nonterms) acc) Map.empty nonterms
+generateSimpleRulesSets nonterms rules = Set.foldr (\x acc -> Map.insert x (generateSimpleRulesSet (Set.singleton x) rules nonterms) acc) Map.empty nonterms
 
 -- Constructs a set of nonterminals N_A
 -- Expects the nonterminal A in the input set, i.e. ni = N_0 = {A}
@@ -50,7 +50,7 @@ generateSimpleRulesSet ni rules nonterms
         if Set.member left ni && isSimpleRule rule nonterms
           then Set.insert (head right) acc
           else acc
-      nni = Set.union ni (foldr fn Set.empty rules)
+      nni = Set.union ni (Set.foldr fn Set.empty rules)
     in if nni == ni then ni else generateSimpleRulesSet nni rules nonterms
 
 -- Checks if a rule is simple
@@ -71,12 +71,12 @@ createCNF :: CFG -> CFG
 createCNF (CFG nonterms terms rules start) =
   let
     -- Set from steps 1 and 2 of algorithm 4.7
-    initialP' = foldr (\rule@(Rule _ right) acc -> if isOneSymbol right terms || isTwoSymbols right nonterms then Set.insert rule acc else acc) Set.empty rules
+    initialP' = Set.foldr (\rule@(Rule _ right) acc -> if isOneSymbol right terms || isTwoSymbols right nonterms then Set.insert rule acc else acc) Set.empty rules
     
     (replacedLongRules, mergedNonterms, apostropheNonterms1) = replaceLongRules longRules nonterms terms
-      where longRules = foldr (\rule@(Rule _ right) acc -> if length right > 2 then Set.insert rule acc else acc) Set.empty rules
+      where longRules = Set.foldr (\rule@(Rule _ right) acc -> if length right > 2 then Set.insert rule acc else acc) Set.empty rules
     (replacedTermRules, apostropheNonterms2) = replaceChomskyTermRules termRules terms
-      where termRules = foldr (\rule@(Rule _ right) acc -> if isOneOrTwoSymbols right terms then Set.insert rule acc else acc) Set.empty rules
+      where termRules = Set.foldr (\rule@(Rule _ right) acc -> if isOneOrTwoSymbols right terms then Set.insert rule acc else acc) Set.empty rules
 
     apostropheNonterms = Set.union apostropheNonterms1 apostropheNonterms2
 
@@ -110,7 +110,7 @@ replaceLongRules rules nonterms terms =
     fn rule (rulesAcc, mergedNontermsAcc, termNontermsAcc) =
       let (newRules, mergedNonterms, termNonterms) = replaceLongRule rule nonterms terms
       in (Set.union newRules rulesAcc, Set.union mergedNonterms mergedNontermsAcc, Set.union termNonterms termNontermsAcc)
-  in foldr fn (Set.empty, Set.empty, Set.empty) rules
+  in Set.foldr fn (Set.empty, Set.empty, Set.empty) rules
 
 -- Replaces a single long rule with CNF compliant rules
 replaceLongRule :: Rule -> Set.Set String -> Set.Set String -> (Set.Set Rule, Set.Set String, Set.Set String)
@@ -154,7 +154,7 @@ replaceChomskyTermRules rules terms =
     fn rule (rulesAcc, nontermsAcc) =
       let (newRule, nonterms) = replaceChomskyTermRule rule terms
       in (Set.insert newRule rulesAcc, Set.union nonterms nontermsAcc)
-  in foldr fn (Set.empty, Set.empty) rules
+  in Set.foldr fn (Set.empty, Set.empty) rules
 
 -- Replaces a single rule whose right side contains two symbols at least one of which is a term
 replaceChomskyTermRule :: Rule -> Set.Set String-> (Rule, Set.Set String)
@@ -173,4 +173,4 @@ replaceChomskyTermRule (Rule left right) terms =
 -- Creates new rules transforming nonterminal representations of terminals back into terminal
 -- Step 6 of algorithm 4.7
 generateNontermToTermRules :: Set.Set String -> Set.Set Rule
-generateNontermToTermRules = foldr (\x acc -> Set.insert (Rule x [init x]) acc) Set.empty
+generateNontermToTermRules = Set.foldr (\x acc -> Set.insert (Rule x [init x]) acc) Set.empty
