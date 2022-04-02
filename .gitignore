@@ -1,7 +1,6 @@
 
 *.pdf
 
-*.hi
-*.o
+build/
 
 flp21-fun
