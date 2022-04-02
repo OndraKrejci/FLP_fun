@@ -12,7 +12,7 @@ $(BIN_NAME): $(SRC_FOLDER)/*.hs
 	ghc $(HSFLAGS) $^ -odir $(BUILD_FOLDER) -hidir $(BUILD_FOLDER) -o flp21-fun
 
 clean:
-	rm -f $(flp21-fun) $(ARCHIVE_NAME) build/*
+	rm -f $(BIN_NAME) $(ARCHIVE_NAME) build/*
 
 test: $(BIN_NAME)
 	python3 $(TEST_FOLDER)/test.py
